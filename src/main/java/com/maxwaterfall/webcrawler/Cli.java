@@ -1,76 +1,129 @@
 package com.maxwaterfall.webcrawler;
 
+import com.maxwaterfall.webcrawler.crawl.Crawler;
+import com.maxwaterfall.webcrawler.crawl.VisitedPage;
+import java.io.PrintStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+import java.time.Clock;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Set;
 
 /**
- * Cli is responsible for interpreting, validating and executing commands.
- * It is also responsible for showing output to the user.
+ * Cli is responsible for interpreting, validating and executing commands. It is also responsible
+ * for showing output to the user.
  */
-@Service
 public class Cli {
 
-  private static Logger LOG = LoggerFactory.getLogger(Cli.class);
+  private final PrintStream outputStream;
+  private final PrintStream errorStream;
+  private final Clock clock;
 
-  private final Crawler crawler;
+  public Cli(PrintStream outputStream, PrintStream errorStream) {
+    this.outputStream = outputStream;
+    this.errorStream = errorStream;
+    this.clock = Clock.systemUTC();
+  }
 
-  public Cli(Crawler crawler) {
-    this.crawler = crawler;
+  /** Alternative constructor with a clock for testing. */
+  Cli(PrintStream outputStream, PrintStream errorStream, Clock clock) {
+    this.outputStream = outputStream;
+    this.errorStream = errorStream;
+    this.clock = clock;
   }
 
   /**
    * Interprets, validates and executes commands.
    *
-   * The only argument is the starting link.
+   * <p>If the command is valid, the only argument should be the starting link.
    *
    * @param args the arguments passed by the user to the program.
+   * @return the system exit code.
    */
-  public void interpret(String ...args) {
+  public int interpret(String... args) {
     // Only argument is the starting link.
     if (args.length < 1) {
       log("Missing [starting-link] argument");
-      logUsageAndQuit();
+      logUsage();
+      return 1;
+    }
+
+    URI start = null;
+    try {
+      start = URI.create(args[0]);
+    } catch (IllegalArgumentException e) {
+      errorLog("'" + args[0] + "' is not a valid uri");
+      logUsage();
+      return 1;
+    }
+
+    if (start.getScheme() == null) {
+      errorLog("'" + args[0] + "' must contain a scheme");
+      logUsage();
+      return 1;
     }
 
     try {
-      var startingLink = URI.create(args[0]);
-      log("Starting to crawl " + startingLink.toString());
-      var result = crawler.crawl(startingLink);
-      logResultAndQuit(result);
-    } catch (IllegalArgumentException e) {
-      log("[starting-link] is not a valid uri");
-      LOG.error("Exception occurred", e);
-      logUsageAndQuit();
+      log("Starting to crawl " + start.toString() + ", please wait");
+      var timerStart = clock.instant();
+      var visitedPages = new Crawler(new HttpClient()).crawl(start);
+      logResult(start, visitedPages, Duration.between(timerStart, clock.instant()));
+      return 0;
     } catch (Exception e) {
-      log("An unexpected error occurred");
-      log("Error message: " + e.getMessage());
-      LOG.error("Exception occurred", e);
-      logUsageAndQuit();
+      errorLog("An unexpected error occurred");
+      e.printStackTrace(errorStream);
+      logUsage();
+      return 1;
     }
-
   }
 
-  private void logResultAndQuit(CrawlResult result) {
-    log("Crawl starting from " + result.getStart() + " complete\n");
-
+  private void logResult(URI start, Set<VisitedPage> visitedPages, Duration timeTaken) {
+    log("Crawl starting from " + start + " complete\n");
     log("Visited:");
-    result.getVisited().forEach(s -> log("    " + s));
-    log("Seen:");
-    result.getSeen().forEach(s -> log("    " + s));
 
-    System.exit(0);
+    var sorted = sortVisitedPages(visitedPages);
+
+    sorted.forEach(
+        vp -> {
+          log("    " + vp.getPageLink());
+          vp.getSeenLinks()
+              .forEach(
+                  link -> {
+                    log("        - " + link);
+                  });
+        });
+
+    log("");
+    log("Summary:");
+    log("    Total visited: " + sorted.size());
+    log("    Crawl time: " + timeTaken);
   }
 
-  private void logUsageAndQuit() {
-    log("Usage: java -jar crawler.jar [starting-link]\nExample: java -jar crawler.jar https://monzo.com/");
-    System.exit(1);
+  private void logUsage() {
+    errorLog(
+        "Usage: java -jar crawler.jar [starting-link]\nExample: java -jar crawler.jar https://example.com/");
+  }
+
+  private void errorLog(Object obj) {
+    errorStream.println(obj);
   }
 
   private void log(Object obj) {
-    System.out.println(obj);
+    outputStream.println(obj);
   }
 
+  /** Sorts the visited pages using natural order. */
+  private List<VisitedPage> sortVisitedPages(Set<VisitedPage> visitedPages) {
+    var sorted = new ArrayList<>(visitedPages);
+
+    // First sort all the 'seen' links on each page.
+    sorted.forEach(vp -> vp.getSeenLinks().sort(Comparator.naturalOrder()));
+
+    // Now sort the visited page links themselves.
+    sorted.sort(Comparator.comparing(VisitedPage::getPageLink));
+
+    return sorted;
+  }
 }

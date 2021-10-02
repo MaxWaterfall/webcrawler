@@ -1,0 +1,27 @@
+Starting to crawl http://localhost:8080/page1.html, please wait
+Crawl starting from http://localhost:8080/page1.html complete
+
+Visited:
+    localhost:8080/page1.html
+        - localhost:8080/page1.html
+        - localhost:8080/page2
+        - localhost:8080/page3.html
+        - not.this.domain.com/test
+    localhost:8080/page2
+        - localhost:8080/page1.html
+        - localhost:8080/page2
+        - localhost:8080/page3.html
+        - localhost:8080/page4.html
+    localhost:8080/page3.html
+        - localhost:8080/page5.html
+        - localhost:8080/page7
+        - localhost:8080/page8/inner-page/inner-inner-page
+    localhost:8080/page4.html
+    localhost:8080/page5.html
+    localhost:8080/page6.html
+    localhost:8080/page7
+    localhost:8080/page8/inner-page/inner-inner-page
+
+Summary:
+    Total visited: 8
+    Crawl time: PT0S

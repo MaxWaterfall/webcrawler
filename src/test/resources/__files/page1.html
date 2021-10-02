@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h1>Some heading</h1>
+<p>Some paragraph</p>
+
+<!-- This link should be seen only (not on this domain) -->
+<a href="http://not.this.domain.com/test"></a>
+
+<!-- This link should be seen from this page but not revisited (circular reference) -->
+<a href="/page1.html"></a>
+
+<!-- This link should be seen from this page but not revisited (circular reference) -->
+<a href="http://localhost:8080/page1.html"></a>
+
+<!-- This link should be visited -->
+<a href="/page2"></a>
+
+<!-- This link should be visited -->
+<div>
+  <div>
+    <div>
+      <div>
+        <a href="/page3.html"></a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- This link should not be seen or visited (not http/https) -->
+<a href="mailto:not-http-or-https"></a>
+
+</body>
+</html>

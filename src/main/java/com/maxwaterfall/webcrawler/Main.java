@@ -1,29 +1,14 @@
 package com.maxwaterfall.webcrawler;
 
-import org.springframework.boot.CommandLineRunner;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
 /**
  * Entry point for the application.
  *
- * Simply passes cli arguments to the command line interpreter.
+ * <p>Simply passes cli arguments to the command line interpreter.
  */
-@SpringBootApplication
-public class Main implements CommandLineRunner {
+public class Main {
 
-	private final Cli cli;
-
-	public Main(Cli cli) {
-		this.cli = cli;
-	}
-
-	public static void main(String[] args) {
-		SpringApplication.run(Main.class, args);
-	}
-
-	@Override
-	public void run(String... args) throws Exception {
-		cli.interpret(args);
-	}
+  public static void main(String[] args) {
+    var cli = new Cli(System.out, System.err);
+    System.exit(cli.interpret(args));
+  }
 }
